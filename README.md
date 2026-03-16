@@ -66,4 +66,4 @@ const DEFAULT_IMAGE_FORMAT = 'jpg';
 
 ## 文件说明
 
-- 主脚本：[`XHS-Downloader.js`](./XHS-Downloader.js)
+- 主脚本：[`小红书图片一键保存.js`](./小红书图片一键保存.js)
