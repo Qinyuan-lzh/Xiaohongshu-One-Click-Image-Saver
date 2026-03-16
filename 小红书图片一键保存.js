@@ -6,6 +6,7 @@
 // @author       Codex
 // @match        http*://www.xiaohongshu.com/explore/*
 // @match        http*://www.xiaohongshu.com/discovery/item/*
+// @match        http*://www.xiaohongshu.com/user/profile/*
 // @grant        unsafeWindow
 // @grant        GM_download
 // @run-at       document-end
@@ -51,6 +52,34 @@ const buildDirectImageItems = (note) => {
     }).filter(Boolean);
 };
 
+const buildFallbackImageItems = (candidates = []) => {
+    const urls = [];
+
+    for (const candidate of candidates) {
+        const src = String(candidate?.src || '').trim();
+        const width = Number(candidate?.width || 0);
+        const height = Number(candidate?.height || 0);
+
+        if (!src || src.startsWith('data:') || !/^https?:\/\//i.test(src)) {
+            continue;
+        }
+
+        if (!/xhscdn\.com|xiaohongshu\.com/i.test(src)) {
+            continue;
+        }
+
+        if (width < 200 && height < 200) {
+            continue;
+        }
+
+        if (!urls.includes(src)) {
+            urls.push(src);
+        }
+    }
+
+    return urls.map((url, index) => ({ index: index + 1, url }));
+};
+
 const normalizeImageFormat = (format = DEFAULT_IMAGE_FORMAT) => {
     const normalized = String(format).trim().toLowerCase();
     if (normalized === 'png') return 'png';
@@ -77,7 +106,7 @@ const buildDownloadTargetPath = (baseDir = DEFAULT_SAVE_DIR, fileName = '') => {
     return normalizedBaseDir ? `${normalizedBaseDir}/${fileName}` : fileName;
 };
 
-const shouldShowFixedSaveButton = (url, note) => isNoteDetailPage(url) && isImageNote(note);
+const shouldShowFixedSaveButton = (url, note) => isNoteDetailPage(url) && (isImageNote(note) || note == null);
 
 const parseNoteIdFromUrl = (url = '') => {
     const match = url.match(/\/(?:explore|discovery\/item)\/([^?]+)/);
@@ -98,6 +127,7 @@ const getNoteBaseName = ({ title = '', url = '' }) => {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         buildDirectImageItems,
+        buildFallbackImageItems,
         buildDownloadTargetPath,
         isImageNote,
         isNoteDetailPage,
@@ -166,6 +196,16 @@ if (typeof window !== 'undefined') {
             }
 
             return state?.note?.noteDetailMap?.[noteId]?.note || null;
+        };
+
+        const extractFallbackImageItemsFromDom = () => {
+            const images = Array.from(document.querySelectorAll('img'));
+            const candidates = images.map((image) => ({
+                src: image.currentSrc || image.src || '',
+                width: image.naturalWidth || image.width || image.clientWidth || 0,
+                height: image.naturalHeight || image.height || image.clientHeight || 0,
+            }));
+            return buildFallbackImageItems(candidates);
         };
 
         const fetchBlob = async (url) => {
@@ -315,12 +355,7 @@ if (typeof window !== 'undefined') {
             }
 
             const note = extractNoteInfo();
-            if (!isImageNote(note)) {
-                showToast(TOAST_NO_IMAGE);
-                return;
-            }
-
-            const items = buildDirectImageItems(note);
+            const items = isImageNote(note) ? buildDirectImageItems(note) : extractFallbackImageItemsFromDom();
             if (items.length === 0) {
                 showToast(TOAST_NO_IMAGE);
                 return;
