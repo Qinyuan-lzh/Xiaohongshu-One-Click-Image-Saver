@@ -57,6 +57,7 @@ const DEFAULT_IMAGE_FORMAT = 'jpg';
 
 - `https://www.xiaohongshu.com/explore/*`
 - `https://www.xiaohongshu.com/discovery/item/*`
+- 'https://www.xiaohongshu.com/user/profile/*'
 
 ## 注意事项
 
